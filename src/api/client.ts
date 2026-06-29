@@ -115,6 +115,18 @@ export const api = {
   markNotificationsRead: (token: string) =>
     request<{ ok: boolean }>('/me/notifications/read', { method: 'POST', token }),
 
+  registerPushToken: (userToken: string, fcmToken: string) =>
+    request<{ ok: boolean }>('/me/push-token', {
+      method: 'POST',
+      token: userToken,
+      body: { token: fcmToken },
+    }),
+
+  getPrefs: (token: string) => request<{ bands: number[] }>('/me/prefs', { token }),
+
+  setPrefs: (token: string, bands: number[]) =>
+    request<{ bands: number[] }>('/me/prefs', { method: 'PUT', token, body: { bands } }),
+
   upgradePremium: (token: string) =>
     request<{ user: AuthUser }>('/me/premium', { method: 'POST', token }),
 };

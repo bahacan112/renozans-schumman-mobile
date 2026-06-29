@@ -2,7 +2,6 @@
  * Main authenticated screen — the Schumann dashboard.
  * Premium status is now server-backed via AuthContext.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,6 +20,11 @@ import GuideAccordion, { AnalysisCard } from '../components/GuideAccordion';
 import NotificationCard from '../components/NotificationCard';
 import NotificationsSheet from '../components/NotificationsSheet';
 import PremiumModal from '../components/PremiumModal';
+import {
+  registerForPush,
+  watchForegroundMessages,
+  watchTokenRefresh,
+} from '../push/push';
 import Simulator from '../components/Simulator';
 import Spectrogram, { SpecHover } from '../components/Spectrogram';
 import Starfield from '../components/Starfield';
@@ -46,7 +50,7 @@ export default function MainScreen() {
   const [simulating, setSimulating] = useState(false);
   const [simKp, setSimKp] = useState(0);
 
-  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [prefs, setPrefs] = useState<number[]>([1, 2, 3]);
   const [premiumVisible, setPremiumVisible] = useState(false);
 
   const [specHover, setSpecHover] = useState<SpecHover>(null);
@@ -61,12 +65,25 @@ export default function MainScreen() {
     requestAnimationFrame(() => setToast(msg));
   }, []);
 
-  // Notification preference is a device-local setting
+  // Load notification band preferences from the backend
   useEffect(() => {
-    AsyncStorage.getItem('schumann_notifications').then((n) =>
-      setNotifEnabled(n === 'true')
-    );
-  }, []);
+    if (!token) return;
+    api
+      .getPrefs(token)
+      .then((r) => setPrefs(r.bands))
+      .catch(() => {});
+  }, [token]);
+
+  const togglePref = useCallback(
+    (band: number) => {
+      const next = prefs.includes(band)
+        ? prefs.filter((b) => b !== band)
+        : [...prefs, band].sort();
+      setPrefs(next); // optimistic
+      if (token) api.setPrefs(token, next).catch(() => {});
+    },
+    [prefs, token]
+  );
 
   const load = useCallback(async () => {
     const d = await fetchSchumannData();
@@ -117,6 +134,21 @@ export default function MainScreen() {
     setUnread(0);
   };
 
+  // FCM push: register device token + handle foreground messages
+  useEffect(() => {
+    if (!token) return;
+    registerForPush(token);
+    const unsubRefresh = watchTokenRefresh(token);
+    const unsubMsg = watchForegroundMessages((title, body) => {
+      showToast(`${title} — ${body}`);
+      loadNotifications();
+    });
+    return () => {
+      unsubRefresh();
+      unsubMsg();
+    };
+  }, [token, showToast, loadNotifications]);
+
   const activeKp = simulating ? simKp : data?.current_kp ?? 0;
   const baseHistory: HistoryPoint[] = data?.history ?? [];
   const history = simulating
@@ -128,7 +160,7 @@ export default function MainScreen() {
   const onSimChange = (v: number) => {
     setSimulating(true);
     setSimKp(v);
-    if (v >= 5 && notifEnabled && !alertCooldown.current) {
+    if (v >= 5 && (prefs.includes(2) || prefs.includes(3)) && !alertCooldown.current) {
       alertCooldown.current = true;
       setTimeout(() => {
         showToast(
@@ -142,16 +174,6 @@ export default function MainScreen() {
   const onSimReset = () => {
     setSimulating(false);
     setSimKp(0);
-  };
-
-  const onToggleNotif = async (v: boolean) => {
-    setNotifEnabled(v);
-    await AsyncStorage.setItem('schumann_notifications', String(v));
-    showToast(
-      v
-        ? 'Kozmik Rezonans Bildirimleri Aktif! Anlık güneş fırtınası uyarıları cihazınıza iletilecektir.'
-        : 'Kozmik rezonans bildirimleri kapatıldı.'
-    );
   };
 
   const onUpgrade = async () => {
@@ -240,8 +262,8 @@ export default function MainScreen() {
           />
           <NotificationCard
             isPremium={isPremium}
-            enabled={notifEnabled}
-            onToggle={onToggleNotif}
+            prefs={prefs}
+            onTogglePref={togglePref}
             onUnlockPress={() => setPremiumVisible(true)}
           />
           <AnalysisCard text={getKpSpiritualDetails(activeKp).desc} />

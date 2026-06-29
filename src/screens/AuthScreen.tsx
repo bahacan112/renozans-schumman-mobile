@@ -23,7 +23,7 @@ type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
 
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
@@ -32,7 +32,20 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [googleBusy, setGoogleBusy] = useState(false);
   const isLogin = mode === 'login';
+
+  const onGoogle = async () => {
+    setError(null);
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Google girişi başarısız oldu.');
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
 
   const submit = async () => {
     setError(null);
@@ -145,6 +158,30 @@ export default function AuthScreen() {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>veya</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google */}
+            <TouchableOpacity
+              style={[styles.googleBtn, googleBusy && { opacity: 0.7 }]}
+              onPress={onGoogle}
+              disabled={googleBusy}
+              activeOpacity={0.85}
+            >
+              {googleBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.googleG}>G</Text>
+                  <Text style={styles.googleText}>Google ile devam et</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.footer}>
@@ -255,6 +292,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitText: { fontFamily: FONTS.sansExtrabold, fontSize: 14, color: '#000' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
+  dividerText: { fontFamily: FONTS.sans, fontSize: 11, color: COLORS.textMuted },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 14,
+    paddingVertical: 14,
+  },
+  googleG: {
+    fontFamily: FONTS.sansBlack,
+    fontSize: 16,
+    color: '#4285F4',
+    width: 20,
+    textAlign: 'center',
+  },
+  googleText: { fontFamily: FONTS.sansSemibold, fontSize: 14, color: '#fff' },
   footer: {
     fontFamily: FONTS.sans,
     fontSize: 10,

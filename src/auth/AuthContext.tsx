@@ -11,7 +11,14 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { api, AuthUser } from '../api/client';
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
+import { api, AuthUser, GOOGLE_WEB_CLIENT_ID } from '../api/client';
+
+GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
 const TOKEN_KEY = 'auth_token';
 
@@ -23,6 +30,7 @@ type AuthContextValue = {
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   upgradePremium: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -79,7 +87,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist]
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    let response;
+    try {
+      response = await GoogleSignin.signIn();
+    } catch (e: any) {
+      if (e?.code === statusCodes.SIGN_IN_CANCELLED) return; // user dismissed
+      throw new Error('Google girişi başlatılamadı.');
+    }
+    if (!isSuccessResponse(response)) return; // cancelled
+    const idToken = response.data.idToken;
+    if (!idToken) throw new Error('Google kimlik anahtarı alınamadı.');
+    const { token: t, user: u } = await api.google(idToken);
+    await persist(t, u);
+  }, [persist]);
+
   const signOut = useCallback(async () => {
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // not signed in with Google; ignore
+    }
     await AsyncStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
@@ -103,8 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const value = useMemo(
-    () => ({ status, user, token, signIn, signUp, signOut, upgradePremium, refresh }),
-    [status, user, token, signIn, signUp, signOut, upgradePremium, refresh]
+    () => ({ status, user, token, signIn, signUp, signInWithGoogle, signOut, upgradePremium, refresh }),
+    [status, user, token, signIn, signUp, signInWithGoogle, signOut, upgradePremium, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

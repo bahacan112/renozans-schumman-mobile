@@ -8,6 +8,10 @@
  */
 export const API_BASE = 'http://localhost:4000';
 
+/** Google OAuth Web Client ID (audience for the native sign-in ID token). */
+export const GOOGLE_WEB_CLIENT_ID =
+  '518484091286-br3j1abfica9k4osk19ee273g7njgclk.apps.googleusercontent.com';
+
 export type AuthUser = {
   id: string;
   email: string | null;
@@ -73,6 +77,12 @@ export const api = {
     request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: { email, password },
+    }),
+
+  google: (idToken: string) =>
+    request<AuthResponse>('/auth/google', {
+      method: 'POST',
+      body: { idToken },
     }),
 
   me: (token: string) => request<{ user: AuthUser }>('/me', { token }),

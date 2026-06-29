@@ -94,7 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       response = await GoogleSignin.signIn();
     } catch (e: any) {
       if (e?.code === statusCodes.SIGN_IN_CANCELLED) return; // user dismissed
-      throw new Error('Google girişi başlatılamadı.');
+      console.warn('[google-signin] error', e?.code, e?.message, e);
+      throw new Error(`Google hatası: ${e?.code ?? '?'} ${e?.message ?? ''}`.trim());
     }
     if (!isSuccessResponse(response)) return; // cancelled
     const idToken = response.data.idToken;

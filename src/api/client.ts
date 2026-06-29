@@ -10,7 +10,7 @@ export const API_BASE = 'http://localhost:4000';
 
 /** Google OAuth Web Client ID (audience for the native sign-in ID token). */
 export const GOOGLE_WEB_CLIENT_ID =
-  '518484091286-br3j1abfica9k4osk19ee273g7njgclk.apps.googleusercontent.com';
+  '518484091286-d5v1ecqtaveem727duvl85s94orn3j1o.apps.googleusercontent.com';
 
 export type AuthUser = {
   id: string;
@@ -83,6 +83,18 @@ export const api = {
     request<AuthResponse>('/auth/google', {
       method: 'POST',
       body: { idToken },
+    }),
+
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean; devCode?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
+
+  resetPassword: (email: string, code: string, password: string) =>
+    request<{ ok: boolean }>('/auth/reset-password', {
+      method: 'POST',
+      body: { email, code, password },
     }),
 
   me: (token: string) => request<{ user: AuthUser }>('/me', { token }),

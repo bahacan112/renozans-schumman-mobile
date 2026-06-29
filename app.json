@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "rezonans-mobile",
+    "name": "Schumann Rezonansı",
     "slug": "rezonans-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#030308",
     "ios": {
       "supportsTablet": true
     },
@@ -20,6 +21,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

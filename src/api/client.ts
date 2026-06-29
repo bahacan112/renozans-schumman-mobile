@@ -1,12 +1,11 @@
 /**
  * Backend (rezonans-backend) API client.
  *
- * API_BASE notes for development:
- * - USB device + `adb reverse tcp:4000 tcp:4000` → http://localhost:4000 works.
- * - Wi-Fi (no reverse) → use the PC LAN IP, e.g. http://192.168.1.7:4000
- * - Production → the deployed HTTPS URL.
+ * API_BASE points at the live backend so the app works over the internet
+ * (no adb reverse needed for the API). For local backend development, swap to
+ * 'http://localhost:4000' with `adb reverse tcp:4000 tcp:4000` on a USB device.
  */
-export const API_BASE = 'http://localhost:4000';
+export const API_BASE = 'https://renozans-backend.baha.tr';
 
 /** Google OAuth Web Client ID (audience for the native sign-in ID token). */
 export const GOOGLE_WEB_CLIENT_ID =

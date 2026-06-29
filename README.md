@@ -24,9 +24,10 @@ adb reverse tcp:4000 tcp:4000   # backend API
 ```
 
 ## Backend bağlantısı
-API adresi [src/api/client.ts](src/api/client.ts) içinde `API_BASE`. Şu an
-`http://localhost:4000` (adb reverse ile). Backend public'e deploy edilince
-buradaki adresi güncelleyin.
+API adresi [src/api/client.ts](src/api/client.ts) içinde `API_BASE` — canlı backend'e
+bağlı: **`https://renozans-backend.baha.tr`**. İnternet üzerinden çalışır, API için
+adb reverse gerekmez. Lokal backend'le geliştirme yapacaksanız `http://localhost:4000`
+yapıp USB cihazda `adb reverse tcp:4000 tcp:4000` çalıştırın.
 
 ## ⚠️ Google ile giriş (her geliştirici için)
 Google Sign-In, build'i imzalayan **debug keystore'un SHA-1'ine** bağlıdır.

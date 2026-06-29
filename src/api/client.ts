@@ -21,6 +21,15 @@ export type AuthUser = {
 
 export type AuthResponse = { token: string; user: AuthUser };
 
+export type NotificationItem = {
+  id: string;
+  kp: number;
+  band: number;
+  title: string;
+  body: string;
+  createdAt: number;
+};
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -97,6 +106,14 @@ export const api = {
     }),
 
   me: (token: string) => request<{ user: AuthUser }>('/me', { token }),
+
+  notifications: (token: string) =>
+    request<{ items: NotificationItem[]; unreadCount: number }>('/me/notifications', {
+      token,
+    }),
+
+  markNotificationsRead: (token: string) =>
+    request<{ ok: boolean }>('/me/notifications/read', { method: 'POST', token }),
 
   upgradePremium: (token: string) =>
     request<{ user: AuthUser }>('/me/premium', { method: 'POST', token }),

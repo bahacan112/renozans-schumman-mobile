@@ -15,10 +15,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ApiError } from '../api/client';
+import { ApiError, api, NotificationItem } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import GuideAccordion, { AnalysisCard } from '../components/GuideAccordion';
 import NotificationCard from '../components/NotificationCard';
+import NotificationsSheet from '../components/NotificationsSheet';
 import PremiumModal from '../components/PremiumModal';
 import Simulator from '../components/Simulator';
 import Spectrogram, { SpecHover } from '../components/Spectrogram';
@@ -28,11 +29,15 @@ import Toast from '../components/Toast';
 import TrendChart, { ChartHover } from '../components/TrendChart';
 import { fetchSchumannData, HistoryPoint, SchumannData } from '../data';
 import { formatTime, getKpSpiritualDetails } from '../kp';
-import { COLORS, FONTS } from '../theme';
+import { COLORS, FONTS, KP_COLORS } from '../theme';
 
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
-  const { user, signOut, upgradePremium } = useAuth();
+  const { user, token, signOut, upgradePremium } = useAuth();
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const [data, setData] = useState<SchumannData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +85,37 @@ export default function MainScreen() {
     setRefreshing(true);
     load();
   }, [load]);
+
+  // Notifications inbox (poll every 2 min)
+  const loadNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await api.notifications(token);
+      setNotifications(res.items);
+      setUnread(res.unreadCount);
+    } catch {
+      // ignore transient errors
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadNotifications();
+    const id = setInterval(loadNotifications, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [loadNotifications]);
+
+  const openNotifications = async () => {
+    setNotifOpen(true);
+    await loadNotifications();
+    if (token) {
+      try {
+        await api.markNotificationsRead(token);
+      } catch {
+        // ignore
+      }
+    }
+    setUnread(0);
+  };
 
   const activeKp = simulating ? simKp : data?.current_kp ?? 0;
   const baseHistory: HistoryPoint[] = data?.history ?? [];
@@ -135,7 +171,14 @@ export default function MainScreen() {
       <Toast message={toast} topInset={insets.top + 60} />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.headerBtnGhost} />
+        <TouchableOpacity style={styles.headerBtn} onPress={openNotifications}>
+          <Text style={[styles.headerBtnText, { fontSize: 17 }]}>🔔</Text>
+          {unread > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <View style={styles.headerTitle}>
           <Text style={styles.h1}>SCHUMANN REZONANSI</Text>
           <Text style={styles.h1sub}>Canlı Jeomanyetik Kp ve Kozmik Akış</Text>
@@ -216,6 +259,12 @@ export default function MainScreen() {
         onClose={() => setPremiumVisible(false)}
         onUpgrade={onUpgrade}
       />
+
+      <NotificationsSheet
+        visible={notifOpen}
+        items={notifications}
+        onClose={() => setNotifOpen(false)}
+      />
     </View>
   );
 }
@@ -244,6 +293,21 @@ const styles = StyleSheet.create({
   },
   headerBtnGhost: { width: 42, height: 42 },
   headerBtnText: { color: COLORS.primaryGold, fontSize: 22, lineHeight: 24 },
+  badge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: KP_COLORS.storm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: 'rgba(10,10,15,1)',
+  },
+  badgeText: { fontFamily: FONTS.sansExtrabold, fontSize: 9, color: '#fff' },
   headerTitle: { flex: 1, alignItems: 'center', paddingHorizontal: 10 },
   h1: {
     fontFamily: FONTS.sansExtrabold,
